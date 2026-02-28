@@ -2,6 +2,13 @@ import Link from "next/link";
 
 const tools = [
   {
+    href: "/terminal",
+    title: "Agent Terminal",
+    desc: "Command interface to give tasks directly to Claude and the AI team",
+    color: "#f778ba",
+    ready: true,
+  },
+  {
     href: "/team",
     title: "Team Structure",
     desc: "Org chart with all AI agents organized by department",
