@@ -60,6 +60,9 @@ I'm assigning this to Quill, our Content Writer. He'll research and write a comp
 
 You can assign multiple tasks in one response. Always confirm the assignment and explain what the agent will do.
 
+**WHEN AN AGENT COMPLETES A TASK:**
+When you receive a task completion report, acknowledge it and suggest 2-3 logical next steps the user could take. Be proactive and helpful.
+
 **Your Capabilities:**
 - Accept tasks and delegate them to appropriate team members
 - Provide status updates on ongoing work
@@ -73,6 +76,7 @@ interface ConversationMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  isSystemNotification?: boolean;
 }
 
 interface AgentTask {
@@ -87,6 +91,8 @@ interface AgentTask {
   updatedAt: string;
   progress: number;
   logs: { time: string; message: string }[];
+  notified?: boolean;
+  result?: string;
 }
 
 interface ConversationData {
@@ -171,6 +177,70 @@ function parseTaskAssignments(response: string): Array<{
   return tasks;
 }
 
+// Generate a realistic task result based on the task
+function generateTaskResult(task: AgentTask): string {
+  const results: Record<string, string[]> = {
+    quill: [
+      "Blog post drafted with 1,500 words, SEO-optimized with target keywords",
+      "Content created with engaging headlines and call-to-action sections",
+      "Article completed with meta description and social media snippets",
+    ],
+    builder: [
+      "Feature implemented and tested locally, ready for review",
+      "Code changes committed to feature branch with unit tests",
+      "Implementation complete with API endpoints and frontend integration",
+    ],
+    scout: [
+      "Codebase analysis complete - found 47 components, 23 API routes",
+      "Dependency audit finished - 3 outdated packages identified",
+      "Code structure mapped with architecture documentation",
+    ],
+    solver: [
+      "Bug fixed and verified - root cause was race condition in async handler",
+      "Issue resolved - added proper error handling and validation",
+      "Problem solved with performance optimization - 40% faster load time",
+    ],
+    pixel: [
+      "UI mockups created for 5 screens with responsive variants",
+      "Design system updated with new color palette and components",
+      "Prototype ready for review in Figma with interactive flows",
+    ],
+    sentinel: [
+      "Code review complete - 3 suggestions, 2 minor issues, overall approved",
+      "Security audit finished - no critical vulnerabilities found",
+      "Review passed with recommendations for improved error handling",
+    ],
+    scribe: [
+      "Documentation updated with API reference and usage examples",
+      "README rewritten with installation guide and troubleshooting section",
+      "Technical docs completed with diagrams and code samples",
+    ],
+    herald: [
+      "Client report sent with weekly progress summary and metrics",
+      "Meeting notes compiled and action items distributed",
+      "Proposal drafted and ready for review before sending",
+    ],
+    echo: [
+      "Support ticket resolved - user issue was configuration error",
+      "FAQ updated with 5 new common questions and answers",
+      "Troubleshooting guide created for recurring issues",
+    ],
+    archie: [
+      "Architecture diagram created with component relationships",
+      "System design proposal ready with scalability considerations",
+      "Technical specification drafted for new microservice",
+    ],
+    linter: [
+      "Code quality scan complete - 12 warnings fixed automatically",
+      "Formatting standardized across 34 files",
+      "Linting rules updated and CI pipeline configured",
+    ],
+  };
+
+  const agentResults = results[task.agent] || ["Task completed successfully"];
+  return agentResults[Math.floor(Math.random() * agentResults.length)];
+}
+
 async function createAgentTask(taskData: {
   agent: string;
   title: string;
@@ -194,6 +264,7 @@ async function createAgentTask(taskData: {
     updatedAt: new Date().toISOString(),
     progress: 0,
     logs: [{ time: new Date().toISOString(), message: `Task assigned to ${agentInfo.name}` }],
+    notified: false,
   };
 
   tasks.push(newTask);
@@ -206,7 +277,6 @@ async function createAgentTask(taskData: {
 }
 
 async function simulateTaskProgress(taskId: string): Promise<void> {
-  // Simulate task progress over time
   const progressSteps = [10, 25, 45, 65, 85, 100];
   const messages = [
     "Starting task analysis...",
@@ -218,7 +288,8 @@ async function simulateTaskProgress(taskId: string): Promise<void> {
   ];
 
   for (let i = 0; i < progressSteps.length; i++) {
-    await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 2000));
+    // Random delay between 5-15 seconds per step for more realistic timing
+    await new Promise(resolve => setTimeout(resolve, 5000 + Math.random() * 10000));
 
     try {
       const tasks = await loadTasks();
@@ -226,19 +297,105 @@ async function simulateTaskProgress(taskId: string): Promise<void> {
 
       if (taskIndex === -1) return;
 
-      tasks[taskIndex].progress = progressSteps[i];
-      tasks[taskIndex].status = progressSteps[i] === 100 ? "completed" : "in_progress";
-      tasks[taskIndex].updatedAt = new Date().toISOString();
-      tasks[taskIndex].logs.push({
+      const task = tasks[taskIndex];
+      task.progress = progressSteps[i];
+      task.status = progressSteps[i] === 100 ? "completed" : "in_progress";
+      task.updatedAt = new Date().toISOString();
+      task.logs.push({
         time: new Date().toISOString(),
         message: messages[i],
       });
+
+      // Generate result when task completes
+      if (progressSteps[i] === 100) {
+        task.result = generateTaskResult(task);
+      }
 
       await saveTasks(tasks);
     } catch (error) {
       console.error("Error updating task progress:", error);
     }
   }
+}
+
+// Check for completed tasks that haven't been notified
+async function getCompletedUnnotifiedTasks(): Promise<AgentTask[]> {
+  const tasks = await loadTasks();
+  return tasks.filter(t => t.status === "completed" && !t.notified);
+}
+
+// Mark tasks as notified
+async function markTasksNotified(taskIds: string[]): Promise<void> {
+  const tasks = await loadTasks();
+  for (const task of tasks) {
+    if (taskIds.includes(task.id)) {
+      task.notified = true;
+    }
+  }
+  await saveTasks(tasks);
+}
+
+// Generate follow-up suggestions using AI
+async function generateFollowUp(completedTasks: AgentTask[], conversationHistory: ConversationMessage[]): Promise<string | null> {
+  const taskSummary = completedTasks.map(t =>
+    `- ${t.agentName} completed: "${t.title}" - Result: ${t.result || "Task finished"}`
+  ).join("\n");
+
+  const followUpPrompt = `The following tasks have been completed by your team:
+
+${taskSummary}
+
+Please acknowledge the completion and suggest 2-3 specific next steps the user could take to build on this work. Be concise and actionable.`;
+
+  // Add the completion notification to conversation
+  const messagesForAI = [
+    ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
+    { role: "user" as const, content: followUpPrompt }
+  ];
+
+  // Try providers
+  let response: string | null = null;
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+      const result = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: messagesForAI,
+      });
+      response = result.content[0].type === "text" ? result.content[0].text : null;
+    } catch (e) {
+      console.error("Anthropic error for follow-up:", e);
+    }
+  }
+
+  if (!response && process.env.OPENAI_API_KEY) {
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            ...messagesForAI
+          ],
+          max_tokens: 1024,
+        }),
+      });
+      const data = await res.json();
+      response = data.choices?.[0]?.message?.content || null;
+    } catch (e) {
+      console.error("OpenAI error for follow-up:", e);
+    }
+  }
+
+  return response;
 }
 
 // Try Anthropic API
@@ -298,7 +455,7 @@ async function tryOpenAI(messages: ConversationMessage[]): Promise<string | null
   }
 }
 
-// Try MiniMax API (OpenAI-compatible)
+// Try MiniMax API
 async function tryMiniMax(messages: ConversationMessage[]): Promise<string | null> {
   if (!process.env.MINIMAX_API_KEY) return null;
 
@@ -338,7 +495,7 @@ async function tryMiniMax(messages: ConversationMessage[]): Promise<string | nul
   }
 }
 
-// Try OpenRouter API as another fallback
+// Try OpenRouter API
 async function tryOpenRouter(messages: ConversationMessage[]): Promise<string | null> {
   if (!process.env.OPENROUTER_API_KEY) return null;
 
@@ -376,7 +533,50 @@ async function tryOpenRouter(messages: ConversationMessage[]): Promise<string | 
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, reset } = await request.json();
+    const { message, reset, checkCompletions } = await request.json();
+
+    // Check for completed tasks and generate follow-up
+    if (checkCompletions) {
+      const completedTasks = await getCompletedUnnotifiedTasks();
+
+      if (completedTasks.length === 0) {
+        return NextResponse.json({ hasCompletions: false });
+      }
+
+      const conversationHistory = await loadConversation();
+      const followUp = await generateFollowUp(completedTasks, conversationHistory);
+
+      if (followUp) {
+        // Add the completion notification to conversation history
+        const notificationMessage = completedTasks.map(t =>
+          `**${t.agentName}** completed: "${t.title}"\n> ${t.result || "Task finished"}`
+        ).join("\n\n");
+
+        conversationHistory.push({
+          role: "assistant",
+          content: `## Task Completion Report\n\n${notificationMessage}\n\n---\n\n${followUp}`,
+          timestamp: new Date().toISOString(),
+          isSystemNotification: true,
+        });
+
+        await saveConversation(conversationHistory);
+        await markTasksNotified(completedTasks.map(t => t.id));
+
+        return NextResponse.json({
+          hasCompletions: true,
+          completedTasks: completedTasks.map(t => ({
+            id: t.id,
+            agent: t.agentName,
+            title: t.title,
+            result: t.result,
+          })),
+          followUp,
+          fullMessage: `## Task Completion Report\n\n${notificationMessage}\n\n---\n\n${followUp}`,
+        });
+      }
+
+      return NextResponse.json({ hasCompletions: false });
+    }
 
     if (reset) {
       await saveConversation([]);
@@ -393,7 +593,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load existing conversation
     const conversationHistory = await loadConversation();
 
     conversationHistory.push({
@@ -402,34 +601,26 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    // Try providers in order: Anthropic -> OpenAI -> MiniMax -> OpenRouter
+    // Try providers in order
     let assistantMessage: string | null = null;
     let provider = "none";
 
     assistantMessage = await tryAnthropic(conversationHistory);
-    if (assistantMessage) {
-      provider = "anthropic";
-    }
+    if (assistantMessage) provider = "anthropic";
 
     if (!assistantMessage) {
       assistantMessage = await tryOpenAI(conversationHistory);
-      if (assistantMessage) {
-        provider = "openai";
-      }
+      if (assistantMessage) provider = "openai";
     }
 
     if (!assistantMessage) {
       assistantMessage = await tryMiniMax(conversationHistory);
-      if (assistantMessage) {
-        provider = "minimax";
-      }
+      if (assistantMessage) provider = "minimax";
     }
 
     if (!assistantMessage) {
       assistantMessage = await tryOpenRouter(conversationHistory);
-      if (assistantMessage) {
-        provider = "openrouter";
-      }
+      if (assistantMessage) provider = "openrouter";
     }
 
     if (!assistantMessage) {
@@ -448,7 +639,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Parse and create tasks from the response
+    // Parse and create tasks
     const taskAssignments = parseTaskAssignments(assistantMessage);
     const createdTasks: AgentTask[] = [];
 
@@ -459,7 +650,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Remove task assignment blocks from visible response
+    // Clean response
     const cleanResponse = assistantMessage.replace(/\[TASK_ASSIGN\][\s\S]*?\[\/TASK_ASSIGN\]/g, '').trim();
 
     conversationHistory.push({
@@ -468,7 +659,6 @@ export async function POST(request: NextRequest) {
       timestamp: new Date().toISOString(),
     });
 
-    // Keep conversation history manageable
     if (conversationHistory.length > 100) {
       conversationHistory.splice(0, conversationHistory.length - 80);
     }
@@ -499,7 +689,6 @@ export async function GET() {
   const conversationHistory = await loadConversation();
   const tasks = await loadTasks();
 
-  // Get active tasks per agent
   const activeTasks: Record<string, AgentTask[]> = {};
   for (const task of tasks.filter(t => t.status !== "completed")) {
     if (!activeTasks[task.agent]) {
@@ -508,6 +697,9 @@ export async function GET() {
     activeTasks[task.agent].push(task);
   }
 
+  // Check for unnotified completions
+  const pendingNotifications = tasks.filter(t => t.status === "completed" && !t.notified);
+
   return NextResponse.json({
     status: "online",
     agent: "Claude - Lead AI",
@@ -515,6 +707,7 @@ export async function GET() {
     session_messages: conversationHistory.length,
     conversation: conversationHistory,
     activeTasks,
+    pendingNotifications: pendingNotifications.length,
     providers: {
       anthropic: !!process.env.ANTHROPIC_API_KEY,
       openai: !!process.env.OPENAI_API_KEY,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import TerminalOutput from "@/components/terminal/TerminalOutput";
 import TerminalInput from "@/components/terminal/TerminalInput";
 import TerminalToolbar from "@/components/terminal/TerminalToolbar";
@@ -17,6 +17,7 @@ interface Message {
     title: string;
     priority: string;
   }>;
+  isNotification?: boolean;
 }
 
 export default function TerminalPage() {
@@ -24,6 +25,8 @@ export default function TerminalPage() {
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load conversation history on mount
   useEffect(() => {
@@ -33,12 +36,13 @@ export default function TerminalPage() {
         const data = await res.json();
 
         if (data.conversation && data.conversation.length > 0) {
-          const loadedMessages: Message[] = data.conversation.map((msg: { role: string; content: string; timestamp: string }, index: number) => ({
+          const loadedMessages: Message[] = data.conversation.map((msg: { role: string; content: string; timestamp: string; isSystemNotification?: boolean }, index: number) => ({
             id: `loaded-${index}`,
             role: msg.role as "user" | "assistant",
             content: msg.content.replace(/\[TASK_ASSIGN\][\s\S]*?\[\/TASK_ASSIGN\]/g, '').trim(),
             timestamp: msg.timestamp,
             status: "complete" as const,
+            isNotification: msg.isSystemNotification,
           }));
           setMessages(loadedMessages);
           setCommandHistory(
@@ -47,6 +51,9 @@ export default function TerminalPage() {
               .map(m => m.content)
           );
         }
+
+        // Set initial pending count
+        setPendingTasks(data.pendingNotifications || 0);
       } catch (error) {
         console.error("Failed to load conversation history:", error);
       } finally {
@@ -56,6 +63,58 @@ export default function TerminalPage() {
 
     loadHistory();
   }, []);
+
+  // Poll for task completions
+  useEffect(() => {
+    async function checkCompletions() {
+      if (isProcessing) return;
+
+      try {
+        const res = await fetch("/api/terminal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ checkCompletions: true }),
+        });
+
+        const data = await res.json();
+
+        if (data.hasCompletions && data.fullMessage) {
+          // Add completion notification to messages
+          const notificationMsg: Message = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: data.fullMessage,
+            timestamp: new Date().toISOString(),
+            status: "complete",
+            isNotification: true,
+          };
+
+          setMessages(prev => [...prev, notificationMsg]);
+
+          // Play notification sound or visual indicator
+          if (typeof window !== "undefined" && "Notification" in window) {
+            if (Notification.permission === "granted") {
+              new Notification("Task Completed", {
+                body: `${data.completedTasks?.length || 1} task(s) finished`,
+                icon: "/favicon.ico",
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error checking completions:", error);
+      }
+    }
+
+    // Start polling every 5 seconds
+    pollIntervalRef.current = setInterval(checkCompletions, 5000);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [isProcessing]);
 
   const addMessage = useCallback((role: Message["role"], content: string, status?: Message["status"], tasksCreated?: Message["tasksCreated"]) => {
     const msg: Message = {
@@ -100,12 +159,13 @@ export default function TerminalPage() {
       } else {
         let responseContent = data.response;
 
-        // Add task notification if tasks were created
         if (data.tasksCreated && data.tasksCreated.length > 0) {
           responseContent += "\n\n---\n**Tasks Dispatched:**\n";
           for (const task of data.tasksCreated) {
             responseContent += `- [${task.priority}] **${task.title}** → Assigned to ${task.agent}\n`;
           }
+          responseContent += "\n*I'll notify you when they're complete.*";
+          setPendingTasks(prev => prev + data.tasksCreated.length);
         }
 
         updateMessage(assistantMsgId, {
@@ -133,6 +193,7 @@ export default function TerminalPage() {
       });
       setMessages([]);
       setCommandHistory([]);
+      setPendingTasks(0);
       addMessage("system", "Session reset. All context cleared. Ready for new tasks.");
     } catch (error) {
       addMessage("system", "Failed to reset session.");
@@ -142,6 +203,15 @@ export default function TerminalPage() {
   function handleClear() {
     setMessages([]);
   }
+
+  // Request notification permission on mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      if (Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+  }, []);
 
   if (isLoading) {
     return (
@@ -160,6 +230,7 @@ export default function TerminalPage() {
         onReset={handleReset}
         messageCount={messages.length}
         status={isProcessing ? "processing" : "online"}
+        pendingTasks={pendingTasks}
       />
       <TerminalOutput messages={messages} />
       <TerminalInput
