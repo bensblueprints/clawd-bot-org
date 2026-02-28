@@ -156,21 +156,21 @@ export async function POST(request: NextRequest) {
       content: message,
     });
 
-    // Try providers in order: Anthropic -> MiniMax -> OpenRouter
+    // Try providers in order: MiniMax -> Anthropic -> OpenRouter
     let assistantMessage: string | null = null;
     let provider = "none";
 
-    // Try Anthropic first
-    assistantMessage = await tryAnthropic(conversationHistory);
+    // Try MiniMax first (primary)
+    assistantMessage = await tryMiniMax(conversationHistory);
     if (assistantMessage) {
-      provider = "anthropic";
+      provider = "minimax";
     }
 
-    // Fallback to MiniMax
+    // Fallback to Anthropic
     if (!assistantMessage) {
-      assistantMessage = await tryMiniMax(conversationHistory);
+      assistantMessage = await tryAnthropic(conversationHistory);
       if (assistantMessage) {
-        provider = "minimax";
+        provider = "anthropic";
       }
     }
 
