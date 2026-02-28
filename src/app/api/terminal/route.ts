@@ -67,7 +67,7 @@ async function tryMiniMax(messages: ConversationMessage[]): Promise<string | nul
   if (!process.env.MINIMAX_API_KEY) return null;
 
   try {
-    const response = await fetch("https://api.minimax.chat/v1/text/chatcompletion_v2", {
+    const response = await fetch("https://api.minimax.io/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -83,15 +83,56 @@ async function tryMiniMax(messages: ConversationMessage[]): Promise<string | nul
       }),
     });
 
+    const data = await response.json();
+
+    // Check for MiniMax-specific error response
+    if (data.base_resp?.status_code && data.base_resp.status_code !== 0) {
+      console.error("MiniMax API error:", data.base_resp.status_msg);
+      return null;
+    }
+
     if (!response.ok) {
-      console.error("MiniMax API error:", await response.text());
+      console.error("MiniMax API error:", data);
+      return null;
+    }
+
+    return data.choices?.[0]?.message?.content || null;
+  } catch (error) {
+    console.error("MiniMax API error:", error);
+    return null;
+  }
+}
+
+// Try OpenAI API
+async function tryOpenAI(messages: ConversationMessage[]): Promise<string | null> {
+  if (!process.env.OPENAI_API_KEY) return null;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          ...messages.map(m => ({ role: m.role, content: m.content }))
+        ],
+        max_tokens: 4096,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("OpenAI API error:", await response.text());
       return null;
     }
 
     const data = await response.json();
     return data.choices?.[0]?.message?.content || null;
   } catch (error) {
-    console.error("MiniMax API error:", error);
+    console.error("OpenAI API error:", error);
     return null;
   }
 }
@@ -160,17 +201,27 @@ export async function POST(request: NextRequest) {
     let assistantMessage: string | null = null;
     let provider = "none";
 
-    // Try MiniMax first (primary)
-    assistantMessage = await tryMiniMax(conversationHistory);
+    // Try providers in order: Anthropic -> OpenAI -> MiniMax -> OpenRouter
+
+    // Try Anthropic first (preferred)
+    assistantMessage = await tryAnthropic(conversationHistory);
     if (assistantMessage) {
-      provider = "minimax";
+      provider = "anthropic";
     }
 
-    // Fallback to Anthropic
+    // Fallback to OpenAI
     if (!assistantMessage) {
-      assistantMessage = await tryAnthropic(conversationHistory);
+      assistantMessage = await tryOpenAI(conversationHistory);
       if (assistantMessage) {
-        provider = "anthropic";
+        provider = "openai";
+      }
+    }
+
+    // Fallback to MiniMax
+    if (!assistantMessage) {
+      assistantMessage = await tryMiniMax(conversationHistory);
+      if (assistantMessage) {
+        provider = "minimax";
       }
     }
 
@@ -189,9 +240,10 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         success: false,
-        error: "No AI provider configured. Please set ANTHROPIC_API_KEY, MINIMAX_API_KEY, or OPENROUTER_API_KEY.",
+        error: "All AI providers failed. Please check your API keys in Settings.",
         availableProviders: {
           anthropic: !!process.env.ANTHROPIC_API_KEY,
+          openai: !!process.env.OPENAI_API_KEY,
           minimax: !!process.env.MINIMAX_API_KEY,
           openrouter: !!process.env.OPENROUTER_API_KEY,
         }
