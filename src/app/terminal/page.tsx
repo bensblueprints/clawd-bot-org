@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import TerminalOutput from "@/components/terminal/TerminalOutput";
 import TerminalInput from "@/components/terminal/TerminalInput";
 import TerminalToolbar from "@/components/terminal/TerminalToolbar";
@@ -11,20 +11,60 @@ interface Message {
   content: string;
   timestamp: string;
   status?: "pending" | "complete" | "error";
+  tasksCreated?: Array<{
+    id: string;
+    agent: string;
+    title: string;
+    priority: string;
+  }>;
 }
 
 export default function TerminalPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addMessage = useCallback((role: Message["role"], content: string, status?: Message["status"]) => {
+  // Load conversation history on mount
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const res = await fetch("/api/terminal");
+        const data = await res.json();
+
+        if (data.conversation && data.conversation.length > 0) {
+          const loadedMessages: Message[] = data.conversation.map((msg: { role: string; content: string; timestamp: string }, index: number) => ({
+            id: `loaded-${index}`,
+            role: msg.role as "user" | "assistant",
+            content: msg.content.replace(/\[TASK_ASSIGN\][\s\S]*?\[\/TASK_ASSIGN\]/g, '').trim(),
+            timestamp: msg.timestamp,
+            status: "complete" as const,
+          }));
+          setMessages(loadedMessages);
+          setCommandHistory(
+            loadedMessages
+              .filter(m => m.role === "user")
+              .map(m => m.content)
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load conversation history:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadHistory();
+  }, []);
+
+  const addMessage = useCallback((role: Message["role"], content: string, status?: Message["status"], tasksCreated?: Message["tasksCreated"]) => {
     const msg: Message = {
       id: crypto.randomUUID(),
       role,
       content,
       timestamp: new Date().toISOString(),
       status,
+      tasksCreated,
     };
     setMessages((prev) => [...prev, msg]);
     return msg.id;
@@ -38,7 +78,7 @@ export default function TerminalPage() {
 
   async function handleSubmit(message: string) {
     setCommandHistory((prev) => [...prev, message]);
-    const userMsgId = addMessage("user", message);
+    addMessage("user", message);
 
     setIsProcessing(true);
     const assistantMsgId = addMessage("assistant", "", "pending");
@@ -58,9 +98,20 @@ export default function TerminalPage() {
           status: "error",
         });
       } else {
+        let responseContent = data.response;
+
+        // Add task notification if tasks were created
+        if (data.tasksCreated && data.tasksCreated.length > 0) {
+          responseContent += "\n\n---\n**Tasks Dispatched:**\n";
+          for (const task of data.tasksCreated) {
+            responseContent += `- [${task.priority}] **${task.title}** → Assigned to ${task.agent}\n`;
+          }
+        }
+
         updateMessage(assistantMsgId, {
-          content: data.response,
+          content: responseContent,
           status: "complete",
+          tasksCreated: data.tasksCreated,
         });
       }
     } catch (error) {
@@ -90,6 +141,16 @@ export default function TerminalPage() {
 
   function handleClear() {
     setMessages([]);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-2rem)] flex flex-col bg-bg rounded-xl border border-border overflow-hidden">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="animate-spin w-8 h-8 border-2 border-accent border-t-transparent rounded-full" />
+        </div>
+      </div>
+    );
   }
 
   return (
