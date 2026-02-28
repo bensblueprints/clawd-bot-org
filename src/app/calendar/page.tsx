@@ -22,16 +22,8 @@ export default function CalendarPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [assigneeFilter, setAssigneeFilter] = useState("");
 
-  if (isLoading || !calendarData) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading calendar...</div>
-      </div>
-    );
-  }
-
-  const { events } = calendarData;
-  const assignees = [...new Set(events.map((e) => e.assignee).filter(Boolean))];
+  const events = calendarData?.events ?? [];
+  const assignees = useMemo(() => [...new Set(events.map((e) => e.assignee).filter(Boolean))], [events]);
 
   const filteredEvents = useMemo(() => {
     let result = [...events];
@@ -41,9 +33,17 @@ export default function CalendarPage() {
     return result;
   }, [events, typeFilter, statusFilter, assigneeFilter]);
 
-  const upcoming = events.filter((e) => e.status === "pending" || e.status === "running").length;
-  const completed = events.filter((e) => e.status === "completed").length;
-  const cronJobs = events.filter((e) => e.type === "cron" && e.status !== "cancelled").length;
+  const upcoming = useMemo(() => events.filter((e) => e.status === "pending" || e.status === "running").length, [events]);
+  const completed = useMemo(() => events.filter((e) => e.status === "completed").length, [events]);
+  const cronJobs = useMemo(() => events.filter((e) => e.type === "cron" && e.status !== "cancelled").length, [events]);
+
+  if (isLoading || !calendarData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-text-muted">Loading calendar...</div>
+      </div>
+    );
+  }
 
   function handlePrev() {
     if (month === 0) { setMonth(11); setYear(year - 1); }

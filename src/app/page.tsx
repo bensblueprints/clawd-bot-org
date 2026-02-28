@@ -13,28 +13,28 @@ const tools = [
     title: "Task Board",
     desc: "Kanban board for tracking project tasks",
     color: "#58a6ff",
-    ready: false,
+    ready: true,
   },
   {
     href: "/pipeline",
     title: "Content Pipeline",
     desc: "Multi-format content workflow with stages",
     color: "#3fb950",
-    ready: false,
+    ready: true,
   },
   {
     href: "/office",
     title: "Digital Office",
     desc: "Visual office floor plan with team status",
     color: "#f0883e",
-    ready: false,
+    ready: true,
   },
   {
     href: "/calendar",
     title: "Calendar",
     desc: "Scheduled tasks, cron jobs, and deadlines",
     color: "#39d2c0",
-    ready: false,
+    ready: true,
   },
 ];
 

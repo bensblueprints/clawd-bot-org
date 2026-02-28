@@ -21,16 +21,8 @@ export default function PipelinePage() {
   const [assigneeFilter, setAssigneeFilter] = useState("");
   const [searchFilter, setSearchFilter] = useState("");
 
-  if (isLoading || !pipelineData) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading content pipeline...</div>
-      </div>
-    );
-  }
-
-  const { items } = pipelineData;
-  const assignees = [...new Set(items.map((i) => i.assignee).filter(Boolean))];
+  const items = pipelineData?.items ?? [];
+  const assignees = useMemo(() => [...new Set(items.map((i) => i.assignee).filter(Boolean))], [items]);
 
   const filteredItems = useMemo(() => {
     let result = [...items];
@@ -47,6 +39,14 @@ export default function PipelinePage() {
     items.forEach((i) => { if (counts[i.stage] !== undefined) counts[i.stage]++; });
     return counts;
   }, [items]);
+
+  if (isLoading || !pipelineData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-text-muted">Loading content pipeline...</div>
+      </div>
+    );
+  }
 
   function handleEdit(item: PipelineItem) {
     setEditingItem(item);
