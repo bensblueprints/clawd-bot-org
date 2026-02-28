@@ -1,0 +1,15 @@
+{
+  "lastUpdated": "2026-02-28T14:00:00Z",
+  "members": [
+    {
+      "id": 1,
+      "name": "Claude",
+      "role": "AI Assistant",
+      "status": "working",
+      "currentTask": "Building Mission Control tools",
+      "avatarColor": "#bc8cff",
+      "initials": "CL",
+      "joinedAt": "2026-02-28"
+    }
+  ]
+}

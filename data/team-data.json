@@ -1,0 +1,136 @@
+{
+  "team": "Clawd Bot Org",
+  "lastUpdated": "2026-02-28T18:00:00Z",
+  "departments": [
+    { "id": "leadership", "name": "Leadership", "color": "#bc8cff" },
+    { "id": "developers", "name": "Developers", "color": "#58a6ff" },
+    { "id": "designers", "name": "Designers", "color": "#3fb950" },
+    { "id": "reviewers", "name": "Code Reviewers", "color": "#f0883e" },
+    { "id": "writers", "name": "Writers", "color": "#39d2c0" },
+    { "id": "communication", "name": "Client Communication", "color": "#f778ba" }
+  ],
+  "members": [
+    {
+      "id": 1,
+      "name": "Claude",
+      "role": "Lead AI / Project Director",
+      "department": "leadership",
+      "status": "working",
+      "avatarColor": "#bc8cff",
+      "initials": "CL",
+      "reportsTo": null,
+      "currentTask": "Building Mission Control tools"
+    },
+    {
+      "id": 2,
+      "name": "Scout",
+      "role": "Senior Codebase Explorer",
+      "department": "developers",
+      "status": "working",
+      "avatarColor": "#58a6ff",
+      "initials": "SC",
+      "reportsTo": 1,
+      "currentTask": "Exploring codebase patterns"
+    },
+    {
+      "id": 3,
+      "name": "Builder",
+      "role": "Full-Stack Developer",
+      "department": "developers",
+      "status": "idle",
+      "avatarColor": "#388bfd",
+      "initials": "BU",
+      "reportsTo": 1
+    },
+    {
+      "id": 4,
+      "name": "Solver",
+      "role": "General Purpose Developer",
+      "department": "developers",
+      "status": "idle",
+      "avatarColor": "#79c0ff",
+      "initials": "SO",
+      "reportsTo": 1
+    },
+    {
+      "id": 5,
+      "name": "Archie",
+      "role": "Software Architect",
+      "department": "designers",
+      "status": "idle",
+      "avatarColor": "#3fb950",
+      "initials": "AR",
+      "reportsTo": 1
+    },
+    {
+      "id": 6,
+      "name": "Pixel",
+      "role": "UI/UX Designer",
+      "department": "designers",
+      "status": "idle",
+      "avatarColor": "#56d364",
+      "initials": "PX",
+      "reportsTo": 1
+    },
+    {
+      "id": 7,
+      "name": "Sentinel",
+      "role": "Senior Code Reviewer",
+      "department": "reviewers",
+      "status": "idle",
+      "avatarColor": "#f0883e",
+      "initials": "SN",
+      "reportsTo": 1
+    },
+    {
+      "id": 8,
+      "name": "Linter",
+      "role": "Code Quality Analyst",
+      "department": "reviewers",
+      "status": "idle",
+      "avatarColor": "#d29922",
+      "initials": "LN",
+      "reportsTo": 1
+    },
+    {
+      "id": 9,
+      "name": "Scribe",
+      "role": "Technical Writer",
+      "department": "writers",
+      "status": "idle",
+      "avatarColor": "#39d2c0",
+      "initials": "SB",
+      "reportsTo": 1
+    },
+    {
+      "id": 10,
+      "name": "Quill",
+      "role": "Content Writer",
+      "department": "writers",
+      "status": "idle",
+      "avatarColor": "#2ea88a",
+      "initials": "QL",
+      "reportsTo": 1
+    },
+    {
+      "id": 11,
+      "name": "Herald",
+      "role": "Client Liaison",
+      "department": "communication",
+      "status": "idle",
+      "avatarColor": "#f778ba",
+      "initials": "HR",
+      "reportsTo": 1
+    },
+    {
+      "id": 12,
+      "name": "Echo",
+      "role": "Support Specialist",
+      "department": "communication",
+      "status": "idle",
+      "avatarColor": "#ff9bce",
+      "initials": "EC",
+      "reportsTo": 1
+    }
+  ]
+}

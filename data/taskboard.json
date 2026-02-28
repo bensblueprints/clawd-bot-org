@@ -1,0 +1,89 @@
+{
+  "project": "Clawd Bot Org",
+  "lastUpdated": "2026-02-28T23:30:00Z",
+  "columns": ["Backlog", "To Do", "In Progress", "In Review", "Done"],
+  "members": [],
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Build Content Pipeline Tool",
+      "description": "Multi-format content pipeline web app with Kanban board, 8 stages, image support, and filtering",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["tool", "content"]
+    },
+    {
+      "id": 2,
+      "title": "Build Mission Control Calendar",
+      "description": "Calendar for scheduled tasks, cron jobs, and task tracking within Mission Control",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["tool", "calendar"]
+    },
+    {
+      "id": 3,
+      "title": "Build Digital Office",
+      "description": "Visual office floor plan showing team members at desks with status indicators, avatars, and task info",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["tool", "office"]
+    },
+    {
+      "id": 4,
+      "title": "Build Team Structure Screen",
+      "description": "Visual org chart showing Claude as lead with all subagents organized by department, with member cards, filters, and add/edit/remove functionality",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["tool", "team"]
+    },
+    {
+      "id": 5,
+      "title": "Migrate to Next.js",
+      "description": "Scaffold Next.js 15 app with App Router, TypeScript, Tailwind CSS. Convert team structure page first, placeholder pages for the rest. REST API routes with JSON file data store.",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["infra", "migration"]
+    },
+    {
+      "id": 6,
+      "title": "Migrate Digital Office to Next.js",
+      "description": "Convert standalone digital-office.html to Next.js page with React components, SWR data fetching, and full CRUD via team API. Includes workstation cards with desk/monitor graphics, quick status bar, stats, and add/edit/remove members.",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["migration", "office"]
+    },
+    {
+      "id": 7,
+      "title": "Migrate Task Board to Next.js",
+      "description": "Convert standalone taskboard.html to Next.js page with Kanban columns, task cards, stats bar, CRUD modal, and API routes backed by taskboard.json.",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["migration", "taskboard"]
+    },
+    {
+      "id": 8,
+      "title": "Migrate Content Pipeline to Next.js",
+      "description": "Convert standalone content-pipeline.html to Next.js page with 8 stage columns, content cards, filter bar, tabbed edit form, and API routes backed by content-data.json.",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["migration", "pipeline"]
+    },
+    {
+      "id": 9,
+      "title": "Migrate Calendar to Next.js",
+      "description": "Convert standalone calendar.html to Next.js page with month grid, event pills, recurrence support, filters, toolbar navigation, and API routes backed by calendar-data.json.",
+      "status": "Done",
+      "priority": "High",
+      "assignee": "Claude",
+      "tags": ["migration", "calendar"]
+    }
+  ]
+}
