@@ -60,6 +60,48 @@ const API_KEYS_CONFIG = [
     description: "GPT models for additional AI capabilities",
     required: false,
   },
+  {
+    id: "CLICKUP_API_KEY",
+    name: "ClickUp API",
+    description: "Monitor your ClickUp tasks and auto-execute with agents",
+    required: false,
+  },
+  {
+    id: "CLICKUP_WORKSPACE_ID",
+    name: "ClickUp Workspace ID",
+    description: "Your ClickUp workspace ID to monitor",
+    required: false,
+  },
+  {
+    id: "FB_ACCESS_TOKEN",
+    name: "Facebook Access Token",
+    description: "Facebook Marketing API for ads management",
+    required: false,
+  },
+  {
+    id: "TWITTER_BEARER_TOKEN",
+    name: "Twitter Bearer Token",
+    description: "Post and schedule tweets automatically",
+    required: false,
+  },
+  {
+    id: "TWITTER_ACCESS_TOKEN",
+    name: "Twitter Access Token",
+    description: "Twitter OAuth access token for posting",
+    required: false,
+  },
+  {
+    id: "TWITTER_ACCESS_SECRET",
+    name: "Twitter Access Secret",
+    description: "Twitter OAuth access secret",
+    required: false,
+  },
+  {
+    id: "LINKEDIN_ACCESS_TOKEN",
+    name: "LinkedIn Access Token",
+    description: "Post to LinkedIn company pages",
+    required: false,
+  },
 ];
 
 export default function SettingsPage() {
@@ -192,6 +234,90 @@ export default function SettingsPage() {
           <div className="space-y-4">
             {API_KEYS_CONFIG.filter((k) =>
               ["SLACK_BOT_TOKEN", "SLACK_SIGNING_SECRET", "DISCORD_BOT_TOKEN", "TELEGRAM_BOT_TOKEN"].includes(k.id)
+            ).map((keyConfig) => (
+              <div key={keyConfig.id} className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{keyConfig.name}</span>
+                    {configured[keyConfig.id] && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                        Configured
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-text-muted text-sm mb-3">{keyConfig.description}</p>
+                <div className="flex gap-2">
+                  <input
+                    type={showKey[keyConfig.id] ? "text" : "password"}
+                    placeholder={configured[keyConfig.id] ? "••••••••••••••••" : "Enter token..."}
+                    value={keys[keyConfig.id] || ""}
+                    onChange={(e) => setKeys({ ...keys, [keyConfig.id]: e.target.value })}
+                    className="flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={() => setShowKey({ ...showKey, [keyConfig.id]: !showKey[keyConfig.id] })}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-white/5"
+                  >
+                    {showKey[keyConfig.id] ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-surface border border-border rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Task Management (ClickUp)</h2>
+          <p className="text-text-muted text-sm mb-6">
+            Connect to ClickUp to automatically monitor your tasks and execute them with agents.
+          </p>
+
+          <div className="space-y-4">
+            {API_KEYS_CONFIG.filter((k) =>
+              ["CLICKUP_API_KEY", "CLICKUP_WORKSPACE_ID"].includes(k.id)
+            ).map((keyConfig) => (
+              <div key={keyConfig.id} className="border border-border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-medium">{keyConfig.name}</span>
+                    {configured[keyConfig.id] && (
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">
+                        Configured
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-text-muted text-sm mb-3">{keyConfig.description}</p>
+                <div className="flex gap-2">
+                  <input
+                    type={showKey[keyConfig.id] ? "text" : "password"}
+                    placeholder={configured[keyConfig.id] ? "••••••••••••••••" : "Enter value..."}
+                    value={keys[keyConfig.id] || ""}
+                    onChange={(e) => setKeys({ ...keys, [keyConfig.id]: e.target.value })}
+                    className="flex-1 bg-bg border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={() => setShowKey({ ...showKey, [keyConfig.id]: !showKey[keyConfig.id] })}
+                    className="px-3 py-2 border border-border rounded-lg hover:bg-white/5"
+                  >
+                    {showKey[keyConfig.id] ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-surface border border-border rounded-xl p-6">
+          <h2 className="text-lg font-semibold mb-4">Marketing & Social Media</h2>
+          <p className="text-text-muted text-sm mb-6">
+            Connect social platforms for automated posting and ad management.
+          </p>
+
+          <div className="space-y-4">
+            {API_KEYS_CONFIG.filter((k) =>
+              ["FB_ACCESS_TOKEN", "TWITTER_BEARER_TOKEN", "TWITTER_ACCESS_TOKEN", "TWITTER_ACCESS_SECRET", "LINKEDIN_ACCESS_TOKEN"].includes(k.id)
             ).map((keyConfig) => (
               <div key={keyConfig.id} className="border border-border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
