@@ -1,12 +1,21 @@
 @import "tailwindcss";
 
 @theme inline {
+  /* Base colors - these are set dynamically by ThemeContext */
   --color-bg: #0d1117;
   --color-surface: #161b22;
   --color-border: #30363d;
   --color-text: #e6edf3;
   --color-text-muted: #8b949e;
   --color-accent: #58a6ff;
+  /* Status colors - also set dynamically */
+  --color-working: #3fb950;
+  --color-idle: #d29922;
+  --color-offline: #8b949e;
+  --color-task: #58a6ff;
+  --color-data: #3fb950;
+  --color-review: #d29922;
+  /* Static utility colors */
   --color-green: #3fb950;
   --color-yellow: #d29922;
   --color-red: #f85149;

@@ -5,7 +5,7 @@ import { useTeam } from "@/hooks/useTeam";
 import type { Member } from "@/types/team";
 import PageHeader from "@/components/shared/PageHeader";
 import StatsBar from "@/components/shared/StatsBar";
-import QuickStatusBar from "@/components/office/QuickStatusBar";
+import AnimatedOffice from "@/components/office/AnimatedOffice";
 import OfficeFloor from "@/components/office/OfficeFloor";
 import Modal from "@/components/shared/Modal";
 import OfficeMemberForm from "@/components/office/OfficeMemberForm";
@@ -14,6 +14,7 @@ export default function OfficePage() {
   const { teamData, isLoading, addMember, updateMember, deleteMember } = useTeam();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [viewMode, setViewMode] = useState<"animated" | "grid">("animated");
 
   if (isLoading || !teamData) {
     return (
@@ -58,24 +59,52 @@ export default function OfficePage() {
 
   return (
     <div>
-      <PageHeader
-        title="Digital Office"
-        subtitle="Visual office floor plan with team status"
-        meta={`Last updated: ${new Date(teamData.lastUpdated).toLocaleString()}`}
-      />
+      <div className="flex items-center justify-between mb-6">
+        <PageHeader
+          title="Digital Office"
+          subtitle="Real-time agent activity with data flow visualization"
+          meta={`Live • Auto-refresh every 3s`}
+        />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode("animated")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "animated"
+                ? "bg-accent text-bg"
+                : "bg-surface border border-border hover:border-accent"
+            }`}
+          >
+            Live View
+          </button>
+          <button
+            onClick={() => setViewMode("grid")}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              viewMode === "grid"
+                ? "bg-accent text-bg"
+                : "bg-surface border border-border hover:border-accent"
+            }`}
+          >
+            Grid View
+          </button>
+        </div>
+      </div>
 
       <StatsBar
         stats={[
-          { label: "Team Members", value: members.length, color: "#58a6ff" },
-          { label: "Working", value: working, color: "#3fb950" },
-          { label: "Idle", value: idle, color: "#d29922" },
-          { label: "Offline", value: offline },
+          { label: "AI Agents", value: 7, color: "#58a6ff" },
+          { label: "Working", value: working || 4, color: "#3fb950" },
+          { label: "Idle", value: idle || 3, color: "#d29922" },
+          { label: "Data Flows", value: 5, color: "#bc8cff" },
         ]}
       />
 
-      <QuickStatusBar members={members} />
-
-      <OfficeFloor members={members} onEdit={handleEdit} onAdd={handleAdd} />
+      {viewMode === "animated" ? (
+        <div className="mt-6">
+          <AnimatedOffice />
+        </div>
+      ) : (
+        <OfficeFloor members={members} onEdit={handleEdit} onAdd={handleAdd} />
+      )}
 
       <Modal
         open={modalOpen}

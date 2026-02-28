@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { promises as fs } from "fs";
-import path from "path";
-
-const DATA_DIR = path.resolve(process.cwd(), "data");
-const TASKS_FILE = path.join(DATA_DIR, "agent-tasks.json");
+import { loadTasks, loadMessages, AGENTS, AgentTask, AgentMessage } from "@/lib/agents/engine";
 
 export interface AgentActivity {
   id: string;
   name: string;
   role: string;
+  emoji: string;
   status: "active" | "idle" | "busy" | "offline";
   currentTask: string | null;
   taskProgress: number;
@@ -18,6 +15,7 @@ export interface AgentActivity {
   tasksToday: number;
   queue: string[];
   recentLogs: { time: string; message: string }[];
+  recentMessages: AgentMessage[];
   metrics: {
     avgResponseTime: number;
     successRate: number;
@@ -26,51 +24,7 @@ export interface AgentActivity {
   };
 }
 
-interface AgentTask {
-  id: string;
-  agent: string;
-  agentName: string;
-  title: string;
-  description: string;
-  priority: "High" | "Medium" | "Low";
-  status: "pending" | "in_progress" | "completed" | "failed";
-  createdAt: string;
-  updatedAt: string;
-  progress: number;
-  logs: { time: string; message: string }[];
-}
-
-interface TasksData {
-  tasks: AgentTask[];
-  lastUpdated: string;
-}
-
-async function loadTasks(): Promise<AgentTask[]> {
-  try {
-    const raw = await fs.readFile(TASKS_FILE, "utf-8");
-    const data: TasksData = JSON.parse(raw);
-    return data.tasks || [];
-  } catch {
-    return [];
-  }
-}
-
-const AGENT_BASE_DATA: Record<string, { name: string; role: string }> = {
-  claude: { name: "Claude", role: "Lead AI & Project Director" },
-  scout: { name: "Scout", role: "Senior Codebase Explorer" },
-  builder: { name: "Builder", role: "Full-Stack Developer" },
-  solver: { name: "Solver", role: "General Purpose Developer" },
-  archie: { name: "Archie", role: "Software Architect" },
-  pixel: { name: "Pixel", role: "UI/UX Designer" },
-  sentinel: { name: "Sentinel", role: "Senior Code Reviewer" },
-  linter: { name: "Linter", role: "Code Quality Analyst" },
-  scribe: { name: "Scribe", role: "Technical Writer" },
-  quill: { name: "Quill", role: "Content Writer" },
-  herald: { name: "Herald", role: "Client Liaison" },
-  echo: { name: "Echo", role: "Support Specialist" },
-};
-
-function generateAgentActivity(tasks: AgentTask[]): AgentActivity[] {
+function generateAgentActivity(tasks: AgentTask[], messages: AgentMessage[]): AgentActivity[] {
   const now = new Date();
   const randomMetric = (min: number, max: number) => Math.floor(Math.random() * (max - min) + min);
 
@@ -83,10 +37,20 @@ function generateAgentActivity(tasks: AgentTask[]): AgentActivity[] {
     tasksByAgent[task.agent].push(task);
   }
 
+  // Group messages by agent
+  const messagesByAgent: Record<string, AgentMessage[]> = {};
+  for (const msg of messages) {
+    if (!messagesByAgent[msg.from]) {
+      messagesByAgent[msg.from] = [];
+    }
+    messagesByAgent[msg.from].push(msg);
+  }
+
   const agents: AgentActivity[] = [];
 
-  for (const [agentId, baseData] of Object.entries(AGENT_BASE_DATA)) {
+  for (const [agentId, agentData] of Object.entries(AGENTS)) {
     const agentTasks = tasksByAgent[agentId] || [];
+    const agentMessages = messagesByAgent[agentId] || [];
     const activeTasks = agentTasks.filter(t => t.status === "in_progress" || t.status === "pending");
     const completedTasks = agentTasks.filter(t => t.status === "completed");
     const currentTask = activeTasks.find(t => t.status === "in_progress") || activeTasks[0];
@@ -127,8 +91,9 @@ function generateAgentActivity(tasks: AgentTask[]): AgentActivity[] {
 
     agents.push({
       id: agentId,
-      name: baseData.name,
-      role: baseData.role,
+      name: agentData.name,
+      role: agentData.role,
+      emoji: agentData.emoji,
       status,
       currentTask: currentTask?.title || null,
       taskProgress: currentTask?.progress || 0,
@@ -138,6 +103,7 @@ function generateAgentActivity(tasks: AgentTask[]): AgentActivity[] {
       tasksToday,
       queue,
       recentLogs,
+      recentMessages: agentMessages.slice(-5),
       metrics: {
         avgResponseTime: randomMetric(5, 30) / 10,
         successRate: randomMetric(94, 100),
@@ -152,7 +118,8 @@ function generateAgentActivity(tasks: AgentTask[]): AgentActivity[] {
 
 export async function GET() {
   const tasks = await loadTasks();
-  const agents = generateAgentActivity(tasks);
+  const messages = await loadMessages();
+  const agents = generateAgentActivity(tasks, messages);
 
   // Calculate team stats
   const stats = {
@@ -167,12 +134,14 @@ export async function GET() {
     avgMemoryUsage: Math.round(agents.reduce((sum, a) => sum + a.metrics.memoryUsage, 0) / agents.length),
     pendingTasks: tasks.filter(t => t.status === "pending").length,
     inProgressTasks: tasks.filter(t => t.status === "in_progress").length,
+    totalMessages: messages.length,
   };
 
   return NextResponse.json({
     agents,
     stats,
     recentTasks: tasks.slice(-10).reverse(),
+    recentMessages: messages.slice(-20).reverse(),
     timestamp: new Date().toISOString(),
   });
 }

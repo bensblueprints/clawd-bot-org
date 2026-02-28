@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useTheme, ThemeKey } from "@/contexts/ThemeContext";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: "grid" },
@@ -78,14 +80,20 @@ const icons: Record<string, React.ReactNode> = {
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { theme, setTheme, themes, colors } = useTheme();
+  const [themeOpen, setThemeOpen] = useState(false);
 
   return (
-    <aside className="w-64 min-h-screen bg-surface border-r border-border flex flex-col">
-      <div className="p-5 border-b border-border">
+    <aside
+      className="w-64 min-h-screen border-r flex flex-col transition-colors duration-300"
+      style={{ background: colors.surface, borderColor: colors.border }}
+    >
+      <div className="p-5 border-b" style={{ borderColor: colors.border }}>
         <h1 className="text-lg font-semibold">
-          <span className="text-accent">Clawd Bot</span> Org
+          <span style={{ color: colors.accent }}>Clawd Bot</span>{" "}
+          <span style={{ color: colors.text }}>Org</span>
         </h1>
-        <p className="text-xs text-text-muted mt-1">Mission Control</p>
+        <p className="text-xs mt-1" style={{ color: colors.muted }}>Mission Control</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {navItems.map((item) => {
@@ -94,13 +102,12 @@ export default function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                active
-                  ? "bg-accent/15 text-accent font-medium"
-                  : (item as { highlight?: boolean }).highlight
-                  ? "text-accent hover:bg-accent/10 border border-accent/30"
-                  : "text-text-muted hover:text-text hover:bg-white/5"
-              }`}
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+              style={{
+                background: active ? `${colors.accent}22` : "transparent",
+                color: active ? colors.accent : (item as { highlight?: boolean }).highlight ? colors.accent : colors.muted,
+                border: (item as { highlight?: boolean }).highlight && !active ? `1px solid ${colors.accent}44` : "1px solid transparent",
+              }}
             >
               {icons[item.icon]}
               {item.label}
@@ -108,8 +115,77 @@ export default function Sidebar() {
           );
         })}
       </nav>
-      <div className="p-4 border-t border-border">
-        <p className="text-xs text-text-muted">Next.js v15</p>
+
+      {/* Theme Selector */}
+      <div className="p-3 border-t relative" style={{ borderColor: colors.border }}>
+        <button
+          onClick={() => setThemeOpen(!themeOpen)}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors"
+          style={{
+            background: themeOpen ? `${colors.accent}15` : "transparent",
+            color: colors.muted
+          }}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+          </svg>
+          <span className="flex-1 text-left">{themes[theme].name}</span>
+          <svg
+            className={`w-4 h-4 transition-transform ${themeOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {themeOpen && (
+          <div
+            className="absolute bottom-full left-3 right-3 mb-2 rounded-lg p-2 shadow-xl z-50 max-h-72 overflow-y-auto"
+            style={{
+              background: colors.surface,
+              border: `1px solid ${colors.border}`,
+              boxShadow: `0 -4px 20px ${colors.accent}22`
+            }}
+          >
+            <div className="text-xs font-semibold uppercase tracking-wider mb-2 px-2" style={{ color: colors.muted }}>
+              Color Theme
+            </div>
+            {(Object.keys(themes) as ThemeKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setTheme(key);
+                  setThemeOpen(false);
+                }}
+                className="w-full flex items-center gap-3 px-2 py-2 rounded-md text-sm transition-colors"
+                style={{
+                  background: theme === key ? `${themes[key].accent}22` : "transparent",
+                  color: theme === key ? themes[key].accent : colors.text,
+                }}
+              >
+                <span
+                  className="w-4 h-4 rounded-full border-2"
+                  style={{
+                    background: themes[key].accent,
+                    borderColor: theme === key ? colors.text : themes[key].border
+                  }}
+                />
+                <span className="flex-1 text-left">{themes[key].name}</span>
+                {theme === key && (
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="p-4 border-t" style={{ borderColor: colors.border }}>
+        <p className="text-xs" style={{ color: colors.muted }}>Next.js v15</p>
       </div>
     </aside>
   );
