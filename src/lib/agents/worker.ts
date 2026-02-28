@@ -35,13 +35,12 @@ async function processPendingTasks() {
       await saveTasks(tasks);
     }
 
-    // Process pending tasks (limit to 3 concurrent)
+    // Process pending tasks (limit to 1 concurrent to avoid rate limits)
     const inProgressCount = tasks.filter(t => t.status === "in_progress").length;
-    const availableSlots = Math.max(0, 3 - inProgressCount);
 
-    const tasksToStart = pendingTasks.slice(0, availableSlots);
-
-    for (const task of tasksToStart) {
+    // Only start new task if none in progress (sequential execution to avoid rate limits)
+    if (inProgressCount === 0 && pendingTasks.length > 0) {
+      const task = pendingTasks[0];
       console.log(`[Worker] Starting task: ${task.title} (Agent: ${task.agentName})`);
       executeAgentTask(task.id);
     }
